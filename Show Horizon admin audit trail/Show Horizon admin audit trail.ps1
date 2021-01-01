@@ -22,7 +22,7 @@
 
     .NOTES
     This script is based on the work done here: https://www.retouw.nl/powercli/new-view-api-query-services-in-powercli-10-1-1-pulling-event-information-without-the-sql-password/
-    
+
     This script requires VMWare PowerCLI to be installed on the machine running the script.
     PowerCLI can be installed through PowerShell (PowerShell version 5 or higher required) by running the command 'Install-Module VMWare.PowerCLI -Force -AllowCLobber -Scope AllUsers' Or by using the 'Install VMware PowerCLI' script.
     Credentials can be set using the 'Prepare machine for Horizon View scripts' script.
@@ -30,6 +30,11 @@
     This script require Powershell 11.4 or higher and Horizon 7.5 or Higher
 
     Modification history:   06/05/2020 - Wouter Kursten - First version
+                            10/09/2020 - WOuter Kursten - second version
+    Changelog -
+            10/09/2020 - Added check for export folder
+            10/09/2020 - Added check if the user is able to write to te logfile
+            10/09/2020 - Added check for ending \ in SBA
 
     .LINK
     https://code.vmware.com/web/tool/11.4.0/vmware-powercli
@@ -105,7 +110,7 @@ Function Test-ArgsCount {
     Success: no ouput
     Failure: "The script did not get enough arguments from the Console. The Console may not be connected to the Horizon View environment, please check this.", and the script will exit with error code 1
     Test-ArgsCount -ArgsCount $args -Reason 'Please check you are connectect to the XXXXX environment in the Console'
-    #>    
+    #>
     Param (
         [Parameter(Mandatory = $true)]
         [int]$ArgsCount,
@@ -294,11 +299,6 @@ $sinceDate = (get-date).AddDays(-$daysback)
 
 $auditlog = @()
 
-
-$auditlog
-
-
-
 foreach ($hvconnectionserver in $hvconnectionservers){
     if ($HVpodstatus.status -eq "ENABLED"){
         [VMware.VimAutomation.HorizonView.Impl.V1.ViewObjectImpl]$objHVConnectionServer = Connect-HorizonConnectionServer -HVConnectionServerFQDN $hvconnectionserver -Credential $CredsHorizon
@@ -397,8 +397,30 @@ foreach ($hvconnectionserver in $hvconnectionservers){
         }
     }
     Disconnect-HorizonConnectionServer -HVConnectionServer $objHVConnectionServer
-    #Out-CUConsole -message ($uaghealthstatuslist | select-object Podname,Gateway_Name,Gateway_Address,Gateway_GatewayZone,Gateway_Version,Gateway_Type,Gateway_Active,Gateway_Stale,Gateway_Contacted,Gateway_Active_Connections,Gateway_Blast_Connections,Gateway_PCOIP_Connections | Out-String)
 }
-$csvpath = $csvlocation+$csvfilename
-$auditlog | sort-object -property Pod,Time | ConvertTo-Csv -NoTypeInformation | Out-File $csvpath -Encoding utf8
+
 write-output $auditlog | select-object -property Time,Node,message | sort-object -property Pod,Time | format-table * -autosize -wrap
+
+if ($csvlocation -eq "%temp%"){
+    $csvlocation=$env:TEMP+"\" 
+}
+elseif(!($csvlocation -match '\\$')){
+    $csvlocation=$csvlocation+"\"
+}
+
+if (test-path $csvlocation){
+    $csvpath = $csvlocation+$csvfilename
+}
+else{
+    out-cuconsole -message "Unable to find folder $csvlocation reverting to default $strCUCredFolder"
+    $csvpath = $strCUCredFolder+"\"+$csvfilename
+}
+Try { [io.file]::OpenWrite($csvpath).close() }
+Catch {
+    $csvpathnew = $strCUCredFolder+"\"+$csvfilename
+    out-cuconsole -message "Unable to write to output file $csvpath reverting to default folder $csvpathnew"
+    $csvpath=$csvpathnew
+}
+out-cuconsole -Message "Writing Logfile"
+$auditlog | sort-object -property Pod,Time | ConvertTo-Csv -NoTypeInformation | Out-File $csvpath -Encoding utf8 -force
+out-cuconsole -message "Logfile written to $csvpath"
