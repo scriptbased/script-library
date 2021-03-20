@@ -15,6 +15,7 @@
 .CONTEXT      Session
 .TAGS         $HDX, $Citrix, $Teams
 .HISTORY      Marcel Calef     - 2021-01-06 - BETA Release 
+              Marcel Calef     - 2021-03-05 update to support 21.mm.x.y  (or any 2*.mm.x.y)
 #>
 
 [CmdLetBinding()]
@@ -53,8 +54,8 @@ Try{$CtxTeamsSvc = ((Get-Service CtxTeamsSvc).status -match "Running")}
 Try {$redirPol = (get-itemproperty -path HKLM:\SOFTWARE\Policies\Citrix\$SessionID\User\MultimediaPolicies  -name "TeamsRedirection").TeamsRedirection}
    catch {$redirPol = "notFound"} # return empty if not found
 
-# Check the Citrix Reciever (CWA) version
-$ctxRxVerTest = ($ctxRx -match '^20\..+')
+# Check the Citrix Reciever (CWA) version    #2021-03-05 update to support 21.mm.x.y  (or any 2*.mm.x.y)
+$ctxRxVerTest = ($ctxRx -match '^2[0-9]\..+')
 
 # Check if $ctxRx was empty
 if ($ctxRx -match 'Discard|On Local'){$ctxRx = 'not Received';Write-Verbose "       ctxRx :  $ctxRx"}
