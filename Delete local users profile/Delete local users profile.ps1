@@ -1,0 +1,1 @@
+﻿& "\\n11-it-stfs020p\content$\ControlUp\Delprof\delprof2.exe" /u /i /ed:public* /ed:*svc* /ed:CitrixTelemetryService* /ed:Service* /ed:mesAdmin* /ed:*Admin* /ed:Local* /ed:Network* /ed:CTXAdmin* /ed:Default*
